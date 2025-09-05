@@ -231,16 +231,15 @@ export default function VoiceAssistantPro({
   return (
     <Card
       className={cn(
-        "mx-auto w-full max-w-md rounded-2xl border shadow-sm bg-gradient-to-b from-emerald-50 to-white",
+        "mx-auto w-full max-w-md rounded-2xl border shadow-sm ",
         "md:max-w-sm", 
         className
       )}
       dir="rtl"
     >
       <CardContent className="p-0">
-        <div className="bg-gradient-to-b from-emerald-50 to-white">
+        <div>
           <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-            <h2 className="text-lg font-extrabold tracking-tight">سالم — مساعد الأمن الغذائي</h2>
             <span
               className={cn(
                 "text-[11px] px-2 py-1 rounded-full border",
@@ -249,6 +248,7 @@ export default function VoiceAssistantPro({
             >
               {ready ? "جاهز" : "يُحضَّر"}
             </span>
+            <h2 className="text-lg font-extrabold tracking-tight">سالم — مساعد الأمن الغذائي</h2>
           </div>
 
           {/* MAIN VISUAL + TIMER */}
@@ -328,7 +328,8 @@ export default function VoiceAssistantPro({
 
           <div ref={chatRef} className="max-h-72 overflow-y-auto space-y-2 pr-1" aria-live="polite" aria-label="سجل المحادثة">
             {chat.map((m) => {
-              const mine = m.role === "user";
+              const assesstans = m.role === "assistant";
+              const mine = m.role === "user" // Salem is "assistant" role
               return (
                 <div key={m.id} className={cn("flex items-start gap-2", mine ? "justify-end" : "justify-start")}>
                   {!mine && (
@@ -341,7 +342,8 @@ export default function VoiceAssistantPro({
                       mine ? "bg-white border-gray-200" : "bg-emerald-50 border-emerald-200"
                     )}
                   >
-                    <div className="font-bold mb-0.5">{mine ? "أنت" : "سالم"}</div>
+                    {mine && <div className="font-bold mb-0.5"> "أنت" </div>}
+                    {assesstans && <div className="font-bold mb-0.5"> "سالم" </div>}
                     <div className="whitespace-pre-wrap">{m.text}</div>
                   </div>
                   {mine && <div className="invisible h-6 w-6" />}

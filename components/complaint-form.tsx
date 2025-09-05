@@ -99,7 +99,7 @@ export function ComplaintForm({ onSubmit, onCancel }: ComplaintFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Category Selection */}
           <div className="space-y-2">
-            <Label htmlFor="category">نوع الشكوى</Label>
+            <Label htmlFor="category" className="block text-right">نوع الشكوى</Label>
             <div className="grid grid-cols-2 gap-2">
               {categories.map((cat) => (
                 <Button
@@ -118,7 +118,7 @@ export function ComplaintForm({ onSubmit, onCancel }: ComplaintFormProps) {
 
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">عنوان الشكوى</Label>
+            <Label htmlFor="title" className="text-right block">عنوان الشكوى</Label>
             <Input
               id="title"
               value={title}
@@ -130,7 +130,7 @@ export function ComplaintForm({ onSubmit, onCancel }: ComplaintFormProps) {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">تفاصيل الشكوى</Label>
+            <Label htmlFor="description" className="block text-right">تفاصيل الشكوى</Label>
             <Textarea
               id="description"
               value={description}
@@ -143,7 +143,7 @@ export function ComplaintForm({ onSubmit, onCancel }: ComplaintFormProps) {
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label>صورة (اختيارية)</Label>
+            <Label className="text-right block">صورة (اختيارية)</Label>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
                 <Camera className="w-4 h-4 ml-2" />
@@ -167,7 +167,7 @@ export function ComplaintForm({ onSubmit, onCancel }: ComplaintFormProps) {
 
           {/* Location */}
           <div className="space-y-2">
-            <Label>الموقع</Label>
+            <Label className="block text-right">الموقع</Label>
             <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{location}</span>

@@ -112,7 +112,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full text-right" dir="rtl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">تبرع بالطعام الإضافي</CardTitle>
         {onCancel && (
@@ -121,11 +121,11 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
           </Button>
         )}
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent dir="rtl">
+        <form onSubmit={handleSubmit} className="space-y-4" dir="rtl">
           {/* Category Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="category">نوع الطعام</Label>
+          <div className="space-y-2" dir="rtl">
+            <Label htmlFor="category" dir="rtl" className="block text-right">نوع الطعام</Label>
             <div className="grid grid-cols-2 gap-2">
               {categories.map((cat) => (
                 <Button
@@ -144,7 +144,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
 
           {/* Food Name */}
           <div className="space-y-2">
-            <Label htmlFor="foodName">اسم الطعام</Label>
+            <Label htmlFor="foodName" className="block text-right">اسم الطعام</Label>
             <Input
               id="foodName"
               value={foodName}
@@ -157,7 +157,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
           {/* Quantity and Unit */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="quantity">الكمية</Label>
+              <Label htmlFor="quantity" className="block text-right">الكمية</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -169,7 +169,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="unit">الوحدة</Label>
+              <Label htmlFor="unit" className="block text-right">الوحدة</Label>
               <Select value={unit} onValueChange={setUnit} required>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الوحدة" />
@@ -187,7 +187,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
 
           {/* Expiry Date */}
           <div className="space-y-2">
-            <Label htmlFor="expiryDate">تاريخ انتهاء الصلاحية</Label>
+            <Label htmlFor="expiryDate" className="block text-right">تاريخ انتهاء الصلاحية</Label>
             <Input
               id="expiryDate"
               type="date"
@@ -200,7 +200,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">وصف إضافي (اختياري)</Label>
+            <Label htmlFor="description" className="block text-right">وصف إضافي (اختياري)</Label>
             <Textarea
               id="description"
               value={description}
@@ -212,7 +212,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label>صورة الطعام (اختيارية)</Label>
+            <Label className="block text-right">صورة الطعام (اختيارية)</Label>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
                 <Camera className="w-4 h-4 ml-2" />
@@ -236,7 +236,7 @@ export function DonationForm({ onSubmit, onCancel }: DonationFormProps) {
 
           {/* Donation Center */}
           <div className="space-y-2">
-            <Label>مركز التبرع المقترح</Label>
+            <Label className="text-right block">مركز التبرع المقترح</Label>
             <div className="space-y-2">
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                 <MapPin className="w-4 h-4 text-muted-foreground" />

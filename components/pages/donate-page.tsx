@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, TrendingUp, Heart, Gift } from "lucide-react"
+import { Plus, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DonationForm, type DonationData } from "@/components/donation-form"
@@ -88,30 +88,6 @@ export function DonatePage() {
                 </h1>
                 <p className="text-muted-foreground">شارك الخير وقلل من هدر الطعام</p>
               </div>
-            </div>
-
-
-            {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Card className="gradient-card border-primary/20 hover:shadow-lg transition-all duration-300">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-primary/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Gift className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-2xl text-foreground mb-1 arabic-nums">{getTotalDonations()}</h3>
-                  <p className="text-sm text-muted-foreground font-medium">إجمالي التبرعات</p>
-                </CardContent>
-              </Card>
-
-              <Card className="gradient-card border-green-200 hover:shadow-lg transition-all duration-300">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h3 className="font-bold text-2xl text-foreground mb-1 arabic-nums">{getDeliveredDonations()}</h3>
-                  <p className="text-sm text-muted-foreground font-medium">تم توصيلها</p>
-                </CardContent>
-              </Card>
             </div>
 
             {/* Impact */}

@@ -95,9 +95,6 @@ export function Leaderboard({ users, currentUser }: LeaderboardProps) {
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {user.donations} تبرع • أثر على {user.impact} شخص
-              </p>
             </div>
 
             {/* Impact Score */}

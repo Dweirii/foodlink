@@ -15,7 +15,6 @@ const cairo = Cairo({
 export const metadata: Metadata = {
   title: "FoodLink - منصة الأمن الغذائي الذكية",
   description: "منصة ذكية لإدارة الأمن الغذائي مع مساعد صوتي",
-  generator: "v0.app",
 }
 
 export default function RootLayout({

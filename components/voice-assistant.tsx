@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Vapi from "@vapi-ai/web";
-import { Camera, Loader2, Phone, PhoneOff, Volume2 } from "lucide-react";
+import { Camera, Phone, PhoneOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type VoiceState = "idle" | "starting" | "in-call" | "listening" | "processing" | "speaking" | "ended";
-type ChatMsg = { id: string; role: "user" | "assistant"; text: string; at: number };
+type ChatRole = "user" | "assistant";
+type ChatMsg = { id: string; role: ChatRole; text: string; at: number };
 
 interface Props {
   className?: string;
@@ -21,9 +22,6 @@ interface Props {
 const PK = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY!;
 const ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID!;
 
-// If UI sits in processing too long, auto-recover to "in-call"
-const WATCHDOG_MS = 7000;
-
 export default function VoiceAssistantPro({
   className,
   avatarSrc = "/salem.png",
@@ -31,7 +29,6 @@ export default function VoiceAssistantPro({
 }: Props) {
   const vapiRef = useRef<Vapi | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const watchdogRef = useRef<NodeJS.Timeout | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const [voiceState, setVoiceState] = useState<VoiceState>("idle");
@@ -54,18 +51,10 @@ export default function VoiceAssistantPro({
     timerRef.current = null;
   };
 
-  const armWatchdog = () => {
-    if (watchdogRef.current) clearTimeout(watchdogRef.current);
-    watchdogRef.current = setTimeout(() => setVoiceState("in-call"), WATCHDOG_MS);
-  };
-  const clearWatchdog = () => {
-    if (watchdogRef.current) clearTimeout(watchdogRef.current);
-    watchdogRef.current = null;
-  };
-
-  const pushMsg = useCallback((role: "user" | "assistant", text: string) => {
-    if (!text?.trim()) return;
-    setChat((prev) => [...prev, { id: `${Date.now()}_${prev.length}`, role, text, at: Date.now() }]);
+  const pushMsg = useCallback((role: ChatRole, text: string) => {
+    const clean = `${text ?? ""}`.trim();
+    if (!clean) return;
+    setChat((prev) => [...prev, { id: `${Date.now()}_${prev.length}`, role, text: clean, at: Date.now() }]);
   }, []);
 
   useEffect(() => {
@@ -86,35 +75,42 @@ export default function VoiceAssistantPro({
     vapi.on("call-start", () => {
       setVoiceState("in-call");
       startTimer();
+      setErr(null);
     });
 
     vapi.on("call-end", () => {
       stopTimer();
-      clearWatchdog();
       setVoiceState("ended");
-      setTimeout(() => setVoiceState("idle"), 700);
+      setTimeout(() => setVoiceState("idle"), 600);
     });
 
-    vapi.on("speech-start", () => {
-      setVoiceState("listening");
-      clearWatchdog();
-    });
+    vapi.on("speech-start", () => setVoiceState("listening"));
+    vapi.on("speech-end", () => setVoiceState("processing"));
 
-    vapi.on("speech-end", () => {
-      setVoiceState("processing");
-      armWatchdog();
-    });
-
+    // Defensive role/content parsing to avoid “both under أنت”
     vapi.on("message", (msg: any) => {
-      // user final transcript
-      if (msg?.type === "transcript" && msg?.transcriptType === "final") {
-        pushMsg("user", msg.transcript);
+      // Final transcript from user
+      if (msg?.type === "transcript" && (msg?.transcriptType === "final" || msg?.isFinal)) {
+        pushMsg("user", msg?.transcript ?? "");
+        return;
       }
-      // assistant spoken text
-      if (msg?.type === "response" && msg?.role === "assistant" && typeof msg?.content === "string") {
-        pushMsg("assistant", msg.content);
+
+      // Assistant text (Vapi can emit different shapes)
+      const role = `${msg?.role ?? ""}`.toLowerCase();
+      const isAssistant = role.includes("assistant");
+      let content = "";
+
+      if (typeof msg?.content === "string") content = msg.content;
+      else if (Array.isArray(msg?.content)) {
+        // Sometimes content is an array of segments
+        content = msg.content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join(" ").trim();
+      } else if (typeof msg?.text === "string") {
+        content = msg.text;
+      }
+
+      if (isAssistant && content) {
+        pushMsg("assistant", content);
         setVoiceState("speaking");
-        clearWatchdog();
       }
     });
 
@@ -122,19 +118,21 @@ export default function VoiceAssistantPro({
       console.error("[FoodLink] Vapi error", e);
       setErr(e?.message ?? "Vapi error");
       stopTimer();
-      clearWatchdog();
       setVoiceState("idle");
     });
 
-    // mic warmup (non-blocking)
-    navigator.mediaDevices
-      ?.getUserMedia?.({ audio: true })
-      .then((s) => s.getTracks().forEach((t) => t.stop()))
-      .finally(() => setReady(true));
+    // Mic warmup (non-blocking, guarded for SSR)
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((s) => s.getTracks().forEach((t) => t.stop()))
+        .finally(() => setReady(true));
+    } else {
+      setReady(true);
+    }
 
     return () => {
       stopTimer();
-      clearWatchdog();
       vapi.removeAllListeners?.();
       vapiRef.current = null;
     };
@@ -147,9 +145,8 @@ export default function VoiceAssistantPro({
     setChat([]);
     setVoiceState("starting");
     try {
-      // NOTE: no 'variables' here — AssistantOverrides does not include it.
       await vapiRef.current.start(ASSISTANT_ID);
-      // Optionally, send a "context" message after start:
+      // (Optional) seed context
       vapiRef.current.send?.({
         type: "add-message",
         message: {
@@ -169,15 +166,14 @@ export default function VoiceAssistantPro({
       await vapiRef.current?.stop();
     } finally {
       stopTimer();
-      clearWatchdog();
       setVoiceState("ended");
       setTimeout(() => setVoiceState("idle"), 600);
     }
   };
 
   const toggleCall = async () => {
-    if (["idle", "ended"].includes(voiceState)) await startCall();
-    else await endCall(); // ALWAYS allow end — even while processing/starting
+    if (voiceState === "idle" || voiceState === "ended") await startCall();
+    else await endCall();
   };
 
   const onUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,7 +184,7 @@ export default function VoiceAssistantPro({
       const url = ev.target?.result as string;
       setUploadedImage(url);
 
-      // Supported way: add a user message with metadata that your Tool can read.
+      // Send as a user message with metadata (Tool will pick it up)
       vapiRef.current?.send?.({
         type: "add-message",
         message: {
@@ -206,100 +202,96 @@ export default function VoiceAssistantPro({
   // ---------- UI helpers ----------
   const brandBg = useMemo(() => {
     switch (brand) {
-      case "green": return "bg-green-600 hover:bg-green-700";
-      case "teal": return "bg-teal-600 hover:bg-teal-700";
-      default: return "bg-emerald-600 hover:bg-emerald-700";
+      case "green":
+        return "bg-green-600 hover:bg-green-700";
+      case "teal":
+        return "bg-teal-600 hover:bg-teal-700";
+      default:
+        return "bg-emerald-600 hover:bg-emerald-700";
     }
   }, [brand]);
 
-  const ringColor = useMemo(() => {
-    switch (brand) {
-      case "green": return "ring-green-300";
-      case "teal": return "ring-teal-300";
-      default: return "ring-emerald-300";
+  const ringCls = useMemo(() => {
+    switch (voiceState) {
+      case "listening":
+        return "ring-2 ring-emerald-300";
+      case "processing":
+        return "ring-2 ring-amber-300";
+      case "speaking":
+        return "ring-2 ring-blue-300";
+      default:
+        return "ring-0";
     }
-  }, [brand]);
-
-  const PrimaryStateVisual = useMemo(() => {
-    const speaking = voiceState === "speaking";
-    const processing = voiceState === "processing" || voiceState === "starting";
-
-    return (
-      <div
-        className={cn(
-          "relative mx-auto h-28 w-28 rounded-full border bg-white/80 backdrop-blur shadow-md flex items-center justify-center transition-all",
-          voiceState === "listening" && ringColor,
-          voiceState === "listening" && "ring-2",
-          processing && "ring-2 ring-amber-300",
-          speaking && "ring-2 ring-blue-300"
-        )}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {!processing && !speaking && (
-          <img
-            src={avatarSrc}
-            alt="Salem"
-            className="h-24 w-24 rounded-full object-cover"
-            onError={(e) => ((e.target as HTMLImageElement).src = "/salem.png")}
-          />
-        )}
-        {processing && <Loader2 className="h-9 w-9 animate-spin text-gray-700" aria-label="processing" />}
-        {speaking && <Volume2 className="h-9 w-9 animate-pulse text-gray-800" aria-label="assistant speaking" />}
-
-        {/* gentle halo */}
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-0 rounded-full",
-            voiceState === "listening" && "animate-pulse",
-            processing && "animate-[pulse_1.2s_ease-in-out_infinite]",
-            speaking && "animate-[pulse_1.2s_ease-in-out_infinite]"
-          )}
-          style={{ boxShadow: "0 0 0 10px rgba(16,185,129,0.08)" }}
-        />
-      </div>
-    );
-  }, [avatarSrc, ringColor, voiceState]);
+  }, [voiceState]);
 
   const canStart = ready && (voiceState === "idle" || voiceState === "ended");
   const canEnd = ["starting", "in-call", "listening", "processing", "speaking"].includes(voiceState);
 
+  // ---------- Render ----------
   return (
     <Card
-      className={cn("overflow-hidden rounded-2xl border shadow-sm bg-gradient-to-b from-emerald-50 to-white backdrop-blur", className)}
+      className={cn(
+        "mx-auto w-full max-w-md rounded-2xl border shadow-sm bg-gradient-to-b from-emerald-50 to-white",
+        "md:max-w-sm", // mobile-first
+        className
+      )}
       dir="rtl"
     >
       <CardContent className="p-0">
         {/* HEADER */}
         <div className="bg-gradient-to-b from-emerald-50 to-white">
-          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-            <div className="flex flex-col">
-              <h2 className="text-xl font-extrabold tracking-tight pb-4">سالم — مساعد الأمن الغذائي</h2>
-            </div>
-            <div
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold tracking-tight">سالم — مساعد الأمن الغذائي</h2>
+            <span
               className={cn(
-                "text-xs px-2 py-1 rounded-full border mb-4",
+                "text-[11px] px-2 py-1 rounded-full border",
                 ready ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-gray-100 text-gray-700 border-gray-200"
               )}
             >
-              {ready ? "جاهز " : "يُحضَّر"}
-            </div>
+              {ready ? "جاهز" : "يُحضَّر"}
+            </span>
           </div>
 
           {/* MAIN VISUAL + TIMER */}
-          <div className="px-5">
+          <div className="px-4">
             <div className="flex items-center justify-between">
-              {PrimaryStateVisual}
+              <div
+                className={cn(
+                  "relative mx-auto h-28 w-28 rounded-full border bg-white/80 backdrop-blur shadow-sm flex items-center justify-center transition-all",
+                  ringCls
+                )}
+              >
+                {/* دائماً الصورة — لا سبينر */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={avatarSrc}
+                  alt="Salem"
+                  className="h-24 w-24 rounded-full object-cover"
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/salem.png")}
+                />
+                {/* نبضة خفيفة حسب الحالة */}
+                {(voiceState === "listening" || voiceState === "processing" || voiceState === "speaking") && (
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-full animate-[pulse_1.2s_ease-in-out_infinite]"
+                    style={{ boxShadow: "0 0 0 10px rgba(16,185,129,0.08)" }}
+                  />
+                )}
+                {voiceState === "speaking" && (
+                  <div className="absolute -bottom-6 inset-x-0 flex justify-center">
+                    <Volume2 className="h-5 w-5 opacity-70" aria-label="assistant speaking" />
+                  </div>
+                )}
+              </div>
+
               {canEnd && (
-                <span className="text-xs px-2 py-1 rounded-full bg-emerald-600 text-white">
-                  {fmtTime(callDuration)}
-                </span>
+                <span className="text-xs px-2 py-1 rounded-full bg-emerald-600 text-white">{fmtTime(callDuration)}</span>
               )}
             </div>
           </div>
 
           {/* ACTIONS */}
-          <div className="px-5 pt-4 pb-5">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="px-4 pt-4 pb-4">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={toggleCall}
                 className={cn("w-full font-semibold text-white", canStart ? brandBg : "bg-rose-600 hover:bg-rose-700")}
@@ -321,15 +313,13 @@ export default function VoiceAssistantPro({
             </div>
 
             {err && (
-              <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                {err}
-              </div>
+              <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">{err}</div>
             )}
           </div>
         </div>
 
         {/* CHAT */}
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-4">
           {uploadedImage && (
             <div className="mb-3">
               <div className="relative overflow-hidden rounded-xl border">
@@ -340,12 +330,7 @@ export default function VoiceAssistantPro({
             </div>
           )}
 
-          <div
-            ref={chatRef}
-            className="max-h-72 overflow-y-auto space-y-2 pr-1"
-            aria-live="polite"
-            aria-label="سجل المحادثة"
-          >
+          <div ref={chatRef} className="max-h-72 overflow-y-auto space-y-2 pr-1" aria-live="polite" aria-label="سجل المحادثة">
             {chat.map((m) => {
               const mine = m.role === "user";
               return (
@@ -356,7 +341,7 @@ export default function VoiceAssistantPro({
                   )}
                   <div
                     className={cn(
-                      "rounded-2xl px-3 py-2 text-sm leading-relaxed max-w-[80%] border shadow-sm",
+                      "rounded-2xl px-3 py-2 text-sm leading-relaxed max-w-[85%] border shadow-sm",
                       mine ? "bg-white border-gray-200" : "bg-emerald-50 border-emerald-200"
                     )}
                   >
@@ -368,17 +353,15 @@ export default function VoiceAssistantPro({
               );
             })}
             {chat.length === 0 && (
-              <div className="text-center text-xs text-gray-500 py-6">
-                ابدأ المكالمة للتحدث مع سالم، أو ارفع صورة لطعامك لتحليلها.
-              </div>
+              <div className="text-center text-xs text-gray-500 py-6">ابدأ المكالمة للتحدث مع سالم، أو ارفع صورة لطعامك لتحليلها.</div>
             )}
           </div>
 
           {["listening", "processing", "speaking"].includes(voiceState) && (
-            <div className="pt-2 text-center text-xs text-gray-500">
-              {voiceState === "listening" && " أستمع إليك الآن"}
-              {voiceState === "processing" && " جاري المعالجة"}
-              {voiceState === "speaking" && " سالم يتحدث"}
+            <div className="pt-1 text-center text-[12px] text-gray-500">
+              {voiceState === "listening" && "أستمع إليك الآن"}
+              {voiceState === "processing" && "جاري المعالجة"}
+              {voiceState === "speaking" && "سالم يتحدث"}
             </div>
           )}
         </div>

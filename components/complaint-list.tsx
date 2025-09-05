@@ -71,12 +71,12 @@ export function ComplaintList({ complaints, onViewDetails }: ComplaintListProps)
   return (
     <div className="space-y-4">
       {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="flex gap-2 overflow-x-auto pb-2" dir="rtl">
         {[
-          { key: "all", label: "الكل" },
-          { key: "pending", label: "قيد الانتظار" },
-          { key: "in-review", label: "قيد المراجعة" },
           { key: "resolved", label: "تم الحل" },
+          { key: "in-review", label: "قيد المراجعة" },
+          { key: "pending", label: "قيد الانتظار" },
+          { key: "all", label: "الكل" },
         ].map((tab) => (
           <Button
             key={tab.key}

@@ -41,7 +41,12 @@ export function DonatePage() {
   const [selectedDonation, setSelectedDonation] = useState<DonationData | null>(null)
 
   const handleSubmitDonation = (donation: DonationData) => {
-    setDonations((prev) => [donation, ...prev])
+    const safeDonation: DonationData = {
+      ...donation,
+      id: donation.id || `${Date.now()}`,
+      createdAt: donation.createdAt ? new Date(donation.createdAt) : new Date(),
+    }
+    setDonations((prev) => [safeDonation, ...prev])
     setViewMode("list")
   }
 
@@ -64,31 +69,36 @@ export function DonatePage() {
       default:
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between bg-gradient-to-r from-accent/10 to-primary/5 p-6 rounded-2xl border border-accent/20">
-              <div>
-                <h1 className="text-3xl font-bold text-primary mb-2 flex items-center gap-3">
-                  <Heart className="w-8 h-8 text-accent" />
-                  تبرع بالطعام
-                </h1>
-                <p className="text-muted-foreground">شارك الخير وقلل من هدر الطعام</p>
-              </div>
+         {/* Hero */}
+            <div
+              dir="rtl"
+              className="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-between gap-4 bg-gradient-to-r from-accent/10 to-primary/5 p-6 rounded-2xl border border-accent/20"
+            >
               <Button
                 onClick={() => setViewMode("form")}
                 size="lg"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 rtl:flex-row-reverse w-full md:w-auto"
               >
-                <Plus className="w-5 h-5 ml-2" />
-                تبرع جديد
+                <Plus className="w-5 h-5" />
+                <span>تبرع جديد</span>
               </Button>
+              <div className="text-right">
+                <h1 className="text-3xl font-bold text-primary mb-2 flex items-center justify-end gap-3 rtl:flex-row-reverse">
+                  <span>تبرع بالطعام</span>
+                </h1>
+                <p className="text-muted-foreground">شارك الخير وقلل من هدر الطعام</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+
+            {/* KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <Card className="gradient-card border-primary/20 hover:shadow-lg transition-all duration-300">
                 <CardContent className="p-6 text-center">
                   <div className="w-16 h-16 bg-primary/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Gift className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="font-bold text-2xl text-foreground mb-1">{getTotalDonations()}</h3>
+                  <h3 className="font-bold text-2xl text-foreground mb-1 arabic-nums">{getTotalDonations()}</h3>
                   <p className="text-sm text-muted-foreground font-medium">إجمالي التبرعات</p>
                 </CardContent>
               </Card>
@@ -98,17 +108,18 @@ export function DonatePage() {
                   <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <TrendingUp className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="font-bold text-2xl text-foreground mb-1">{getDeliveredDonations()}</h3>
+                  <h3 className="font-bold text-2xl text-foreground mb-1 arabic-nums">{getDeliveredDonations()}</h3>
                   <p className="text-sm text-muted-foreground font-medium">تم توصيلها</p>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Impact */}
             <Card className="bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 border-primary/30 shadow-lg">
               <CardHeader className="pb-3">
-                <CardTitle className="text-xl text-primary flex items-center gap-2">
+                <CardTitle className="text-xl text-primary flex items-center justify-end gap-2 rtl:flex-row-reverse">
+                  <span>أثرك في المجتمع</span>
                   <Heart className="w-6 h-6 text-accent" />
-                  أثرك في المجتمع
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -128,7 +139,7 @@ export function DonatePage() {
   }
 
   return (
-    <div className="p-6" dir="rtl">
+    <div className="p-6 max-w-screen-md mx-auto" dir="rtl">
       {renderContent()}
     </div>
   )

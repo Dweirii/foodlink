@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
 interface Event {
   id: string
@@ -28,6 +29,8 @@ interface EventsCampaignsProps {
 
 export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
   const [registeredEvents, setRegisteredEvents] = useState<Set<string>>(new Set(["2"]))
+  // NEW: تحكّم عرض المزيد/أقل في العرض المختصر
+  const [expanded, setExpanded] = useState(false)
 
   const events: Event[] = [
     {
@@ -101,16 +104,13 @@ export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
     },
   ]
 
-  const displayedEvents = showAll ? events : events.slice(0, 3)
+  // لو showAll=true نعرض الكل، غير ذلك نعتمد expanded
+  const displayedEvents = showAll ? events : (expanded ? events : events.slice(0, 3))
 
   const toggleRegistration = (eventId: string) => {
     setRegisteredEvents((prev) => {
       const newSet = new Set(prev)
-      if (newSet.has(eventId)) {
-        newSet.delete(eventId)
-      } else {
-        newSet.add(eventId)
-      }
+      newSet.has(eventId) ? newSet.delete(eventId) : newSet.add(eventId)
       return newSet
     })
   }
@@ -145,66 +145,51 @@ export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
     }
   }
 
-  const getPriorityColor = (priority: string) => {
+  const priorityBorder = (priority: string) => {
+    const base = "rtl:border-r-4 ltr:border-l-4"
     switch (priority) {
       case "high":
-        return "border-l-red-500"
+        return `${base} border-red-500`
       case "medium":
-        return "border-l-yellow-500"
+        return `${base} border-yellow-500`
       case "low":
-        return "border-l-green-500"
+        return `${base} border-green-500`
       default:
-        return "border-l-gray-500"
+        return `${base} border-gray-500`
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat("ar-SA", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    }).format(date)
-  }
+  const formatDate = (dateString: string) =>
+    new Intl.DateTimeFormat("ar-SA", { weekday: "long", month: "long", day: "numeric" }).format(new Date(dateString))
 
-  const formatTime = (timeString: string) => {
-    return new Intl.DateTimeFormat("ar-SA", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(`2024-01-01T${timeString}`))
-  }
+  const formatTime = (timeString: string) =>
+    new Intl.DateTimeFormat("ar-SA", { hour: "2-digit", minute: "2-digit" }).format(new Date(`2024-01-01T${timeString}`))
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-  }
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").toUpperCase()
 
+  // ---------- Full view ----------
   if (showAll) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" dir="rtl">
         {displayedEvents.map((event) => {
           const isRegistered = registeredEvents.has(event.id)
-          const isFull = event.maxParticipants && event.participants >= event.maxParticipants
+          const isFull = !!event.maxParticipants && event.participants >= event.maxParticipants
 
           return (
-            <Card key={event.id} className={`border-l-4 ${getPriorityColor(event.priority)}`}>
-              <CardContent className="p-4">
+            <Card key={event.id} className={cn("text-right", priorityBorder(event.priority))} dir="rtl">
+              <CardContent className="p-4 text-right" dir="rtl">
                 <div className="space-y-4">
                   {/* Header */}
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between" dir="rtl">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 rtl:flex-row-reverse mb-2">
                         <h3 className="font-semibold text-lg">{event.title}</h3>
                         <Badge variant="outline" className={getTypeColor(event.type)}>
                           {getTypeText(event.type)}
                         </Badge>
                         {event.priority === "high" && (
-                          <Badge variant="destructive" className="text-xs">
-                            عاجل
-                          </Badge>
+                          <Badge variant="destructive" className="text-xs">عاجل</Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed">{event.description}</p>
@@ -213,19 +198,19 @@ export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
 
                   {/* Event Details */}
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 rtl:flex-row-reverse text-sm">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span>{formatDate(event.date)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 rtl:flex-row-reverse text-sm">
                       <Clock className="w-4 h-4 text-muted-foreground" />
                       <span>{formatTime(event.time)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 rtl:flex-row-reverse text-sm">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
                       <span>{event.location}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 rtl:flex-row-reverse text-sm">
                       <Users className="w-4 h-4 text-muted-foreground" />
                       <span>
                         {event.participants} مشارك
@@ -235,11 +220,11 @@ export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
                   </div>
 
                   {/* Organizer */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 rtl:flex-row-reverse">
                     <Avatar className="w-8 h-8">
                       <AvatarFallback className="text-xs">{getInitials(event.organizer)}</AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="text-right">
                       <p className="text-sm font-medium">{event.organizer}</p>
                       <p className="text-xs text-muted-foreground">منظم الفعالية</p>
                     </div>
@@ -248,20 +233,19 @@ export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
                   {/* Action Button */}
                   <Button
                     onClick={() => toggleRegistration(event.id)}
-                    disabled={isFull && !isRegistered}
-                    className="w-full"
+                    className="w-full flex items-center justify-center gap-2 rtl:flex-row-reverse"
                     variant={isRegistered ? "outline" : "default"}
                   >
                     {isRegistered ? (
                       <>
-                        <UserPlus className="w-4 h-4 ml-2" />
+                        <UserPlus className="w-4 h-4" />
                         مسجل - إلغاء التسجيل
                       </>
                     ) : isFull ? (
                       "مكتمل العدد"
                     ) : (
                       <>
-                        <Heart className="w-4 h-4 ml-2" />
+                        <Heart className="w-4 h-4" />
                         سجل الآن
                       </>
                     )}
@@ -275,49 +259,63 @@ export function EventsCampaigns({ showAll = false }: EventsCampaignsProps) {
     )
   }
 
-  // Compact view for home page
+  // ---------- Compact view (Home) ----------
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader>
-        <CardTitle className="text-lg flex items-center">
-          <Calendar className="w-5 h-5 ml-2 text-primary" />
-          الفعاليات والمبادرات
+        <CardTitle className="text-lg flex items-center justify-end gap-2 rtl:flex-row-reverse text-right" dir="rtl">
+          <span>الفعاليات والمبادرات</span>
+          <Calendar className="w-5 h-5 text-primary" />
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-3">
         {displayedEvents.map((event) => {
           const isRegistered = registeredEvents.has(event.id)
-          const isFull = event.maxParticipants && event.participants >= event.maxParticipants
+          const isFull = !!event.maxParticipants && event.participants >= event.maxParticipants
 
           return (
-            <div key={event.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
+            <div key={event.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border text-right" dir="rtl">
+              <Button
+                size="sm"
+                variant={isRegistered ? "outline" : "default"}
+                onClick={() => toggleRegistration(event.id)}
+                className="flex items-center gap-2 rtl:flex-row"
+              >
+                {isRegistered ? "مسجل" : isFull ? "مكتمل" : (
+                  <>
+                    <Heart className="w-4 h-4" />
+                    سجّل الآن
+                  </>
+                )}
+              </Button>
+              <div className="flex-1 ">
+                <div className="flex items-center gap-2 rtl:flex-row mb-1">
                   <h4 className="font-semibold text-sm">{event.title}</h4>
                   <Badge variant="outline" className={`text-xs ${getTypeColor(event.type)}`}>
                     {getTypeText(event.type)}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-4 rtl:flex-row text-xs text-muted-foreground">
                   <span>{formatDate(event.date)}</span>
                   <span>{formatTime(event.time)}</span>
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant={isRegistered ? "outline" : "default"}
-                onClick={() => toggleRegistration(event.id)}
-                disabled={isFull && !isRegistered}
-              >
-                {isRegistered ? "مسجل" : isFull ? "مكتمل" : "سجل الآن"}
-              </Button>
             </div>
           )
         })}
-        <Button variant="outline" className="w-full mt-3 bg-transparent">
-          <ChevronRight className="w-4 h-4 ml-2" />
-          عرض جميع الفعاليات
-        </Button>
+
+        {/* NEW: الزر يعمل كتبديل عرض/إخفاء */}
+        {!showAll && (
+          <Button
+            variant="outline"
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full mt-3 bg-transparent flex items-center justify-center gap-2 rtl:flex-row-reverse"
+          >
+            <ChevronRight className="w-4 h-4" />
+            {expanded ? "عرض أقل" : "عرض جميع الفعاليات"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

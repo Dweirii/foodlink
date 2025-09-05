@@ -232,13 +232,12 @@ export default function VoiceAssistantPro({
     <Card
       className={cn(
         "mx-auto w-full max-w-md rounded-2xl border shadow-sm bg-gradient-to-b from-emerald-50 to-white",
-        "md:max-w-sm", // mobile-first
+        "md:max-w-sm", 
         className
       )}
       dir="rtl"
     >
       <CardContent className="p-0">
-        {/* HEADER */}
         <div className="bg-gradient-to-b from-emerald-50 to-white">
           <div className="px-4 pt-4 pb-2 flex items-center justify-between">
             <h2 className="text-lg font-extrabold tracking-tight">سالم — مساعد الأمن الغذائي</h2>
@@ -261,15 +260,12 @@ export default function VoiceAssistantPro({
                   ringCls
                 )}
               >
-                {/* دائماً الصورة — لا سبينر */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={avatarSrc}
                   alt="Salem"
                   className="h-24 w-24 rounded-full object-cover"
                   onError={(e) => ((e.target as HTMLImageElement).src = "/salem.png")}
                 />
-                {/* نبضة خفيفة حسب الحالة */}
                 {(voiceState === "listening" || voiceState === "processing" || voiceState === "speaking") && (
                   <div
                     className="pointer-events-none absolute inset-0 rounded-full animate-[pulse_1.2s_ease-in-out_infinite]"

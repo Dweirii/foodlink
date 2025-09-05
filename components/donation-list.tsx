@@ -13,8 +13,12 @@ interface DonationListProps {
   onViewDetails?: (donation: DonationData) => void
 }
 
+type FilterKey = "all" | "pending" | "confirmed" | "collected" | "delivered"
+
 export function DonationList({ donations, onViewDetails }: DonationListProps) {
-  const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "collected" | "delivered">("all")
+  const [filter, setFilter] = useState<FilterKey>("all")
+
+  const toDate = (d: unknown) => (d instanceof Date ? d : new Date(d as any))
 
   const filteredDonations = donations.filter((donation) => {
     if (filter === "all") return true
@@ -66,46 +70,52 @@ export function DonationList({ donations, onViewDetails }: DonationListProps) {
     }
   }
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("ar-SA", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(date)
-  }
+  const formatDate = (date: Date) =>
+    new Intl.DateTimeFormat("ar-SA", { year: "numeric", month: "short", day: "numeric" }).format(date)
 
   const formatExpiryDate = (dateString: string) => {
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat("ar-SA", {
-      month: "short",
-      day: "numeric",
-    }).format(date)
+    return isNaN(date.getTime())
+      ? "—"
+      : new Intl.DateTimeFormat("ar-SA", { month: "short", day: "numeric" }).format(date)
   }
 
-  const getDaysUntilExpiry = (dateString: string) => {
-    const expiryDate = new Date(dateString)
+  const daysUntil = (dateString: string) => {
+    const expiry = new Date(dateString)
+    if (isNaN(expiry.getTime())) return null
     const today = new Date()
-    const diffTime = expiryDate.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    expiry.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     return diffDays
   }
 
+  const pluralDaysAr = (n: number) => {
+    if (n === 0) return "اليوم"
+    if (n === 1) return "يوم"
+    if (n === 2) return "يومان"
+    if (n <= 10) return "أيام"
+    return "يومًا"
+  }
+
+  const filters: Array<{ key: FilterKey; label: string }> = [
+    { key: "all", label: "الكل" },
+    { key: "pending", label: "قيد المراجعة" },
+    { key: "confirmed", label: "تم التأكيد" },
+    { key: "collected", label: "تم الاستلام" },
+    { key: "delivered", label: "تم التوصيل" },
+  ]
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {[
-          { key: "all", label: "الكل" },
-          { key: "pending", label: "قيد المراجعة" },
-          { key: "confirmed", label: "تم التأكيد" },
-          { key: "collected", label: "تم الاستلام" },
-          { key: "delivered", label: "تم التوصيل" },
-        ].map((tab) => (
+      <div className="flex flex-row gap-2 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {filters.map((tab) => (
           <Button
             key={tab.key}
             variant={filter === tab.key ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter(tab.key as any)}
+            onClick={() => setFilter(tab.key)}
             className="whitespace-nowrap"
           >
             {tab.label}
@@ -129,68 +139,100 @@ export function DonationList({ donations, onViewDetails }: DonationListProps) {
       ) : (
         <div className="space-y-3">
           {filteredDonations.map((donation) => {
-            const daysUntilExpiry = getDaysUntilExpiry(donation.expiryDate)
-            const isExpiringSoon = daysUntilExpiry <= 2
+            const days = daysUntil(donation.expiryDate)
+            const isExpiringSoon = typeof days === "number" && days >= 0 && days <= 2
+            const createdAtDate = toDate(donation.createdAt)
+            const centerName = donation.donationCenter ? donation.donationCenter.split(" - ")[0] : "—"
 
             return (
-              <Card key={donation.id} className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                key={donation.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => onViewDetails?.(donation)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    onViewDetails?.(donation)
+                  }
+                }}
+              >
                 <CardContent className="p-4">
-                  <div className="space-y-3">
+                  <div className="space-y-3 text-right">
                     {/* Header */}
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between rtl:flex-row-reverse">
+                      {/* المحتوى (يمين في RTL) */}
                       <div className="flex-1">
                         <h3 className="font-semibold text-sm mb-1 line-clamp-1">
                           {donation.quantity} {donation.unit} {donation.foodName}
                         </h3>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("text-xs", getStatusColor(donation.status))}>
+                        <div className="flex items-center gap-2 rtl:flex-row-reverse">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rtl:flex-row-reverse text-xs rounded-md px-2 py-0.5 border",
+                              getStatusColor(donation.status)
+                            )}
+                          >
                             {getStatusIcon(donation.status)}
-                            <span className="mr-1">{getStatusText(donation.status)}</span>
-                          </Badge>
+                            <span>{getStatusText(donation.status)}</span>
+                          </span>
                           <Badge variant="secondary" className="text-xs">
-                            {donation.category}
+                            {donation.category || "عام"}
                           </Badge>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => onViewDetails?.(donation)}>
+
+                      {/* زر العرض (يسار في RTL) */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onViewDetails?.(donation)
+                        }}
+                        aria-label="عرض التفاصيل"
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                     </div>
 
                     {/* Expiry Warning */}
                     {isExpiringSoon && donation.status !== "delivered" && (
-                      <div className="flex items-center gap-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center gap-2 rtl:flex-row-reverse p-2 bg-orange-50 border border-orange-200 rounded-lg">
                         <Calendar className="w-4 h-4 text-orange-600" />
                         <span className="text-xs text-orange-700">
-                          ينتهي خلال {daysUntilExpiry} {daysUntilExpiry === 1 ? "يوم" : "أيام"}
+                          ينتهي خلال {days} {pluralDaysAr(days!)}
                         </span>
                       </div>
                     )}
 
                     {/* Image Preview */}
                     {donation.image && (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={donation.image || "/placeholder.svg"}
-                        alt="Food donation"
+                        alt="صورة التبرع"
                         className="w-full h-24 object-cover rounded-lg"
+                        loading="lazy"
                       />
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground rtl:flex-row-reverse">
+                      <div className="flex items-center gap-1 rtl:flex-row-reverse">
                         <Calendar className="w-3 h-3" />
-                        <span>{formatDate(donation.createdAt)}</span>
+                        <span>{formatDate(createdAtDate)}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 rtl:flex-row-reverse">
                         <span>ينتهي: {formatExpiryDate(donation.expiryDate)}</span>
                       </div>
                     </div>
 
                     {/* Donation Center */}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1 rtl:flex-row-reverse text-xs text-muted-foreground">
                       <MapPin className="w-3 h-3" />
-                      <span className="truncate">{donation.donationCenter.split(" - ")[0]}</span>
+                      <span className="truncate">{centerName}</span>
                     </div>
                   </div>
                 </CardContent>

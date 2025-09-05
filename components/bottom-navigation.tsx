@@ -10,57 +10,89 @@ interface BottomNavigationProps {
 
 export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {
   const tabs = [
-    { id: "home", icon: Home, label: "الرئيسية" },
-    { id: "donate", icon: Heart, label: "تبرع" },
-    { id: "complaints", icon: MessageSquare, label: "شكاوى" },
-    { id: "profile", icon: User, label: "الملف الشخصي" },
+    { id: "home",        icon: Home,          label: "الرئيسية" },
+    { id: "donate",      icon: Heart,         label: "تبرع" },
+    { id: "complaints",  icon: MessageSquare, label: "شكاوى" },
+    { id: "profile",     icon: User,          label: "الملف الشخصي" },
   ]
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-card/98 backdrop-blur-xl border-t border-border shadow-2xl"
       dir="rtl"
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50",
+        "bg-card/95 backdrop-blur-xl border-t border-border shadow-[0_-6px_20px_-10px_rgba(0,0,0,0.25)]"
+      )}
+      // padding أسفل للـ notch / home indicator
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+      aria-label="التنقل السفلي"
     >
-      <div className="flex flex-row-reverse items-center justify-around py-3 px-2">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
+      <div className="mx-auto max-w-screen-md px-3">
+        <div
+          className={cn(
+            "grid grid-cols-4 gap-2",
+            "py-1"
+          )}
+        >
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
 
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={cn(
-                "flex flex-col items-center justify-center p-4 rounded-2xl transition-all duration-300",
-                "min-w-[70px] min-h-[70px] relative overflow-hidden group",
-                isActive
-                  ? "text-white bg-primary shadow-lg scale-105 border border-primary/50"
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/10 hover:scale-105",
-              )}
-            >
-              {isActive && (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-2xl"></div>
-              )}
-              <Icon
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "w-6 h-6 mb-2 transition-all duration-300 relative z-10",
-                  isActive && "scale-110 text-white",
-                )}
-              />
-              <span
-                className={cn(
-                  "text-xs font-semibold relative z-10 text-center leading-tight",
-                  isActive ? "text-white" : "text-muted-foreground group-hover:text-primary",
+                  "group relative select-none touch-manipulation",
+                  "h-16 w-full rounded-2xl border transition-all duration-300",
+                  "flex flex-col items-center justify-center overflow-hidden",
+                  isActive
+                    ? "border-primary/40 text-primary-foreground"
+                    : "border-transparent text-muted-foreground hover:text-primary"
                 )}
               >
-                {tab.label}
-              </span>
-              {isActive && (
-                <div className="absolute bottom-1 start-1/2 transform -translate-x-1/2 w-8 h-1 bg-white/80 rounded-full"></div>
-              )}
-            </button>
-          )
-        })}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300",
+                    "bg-gradient-to-br from-primary to-accent",
+                    isActive && "opacity-100"
+                  )}
+                />
+                {!isActive && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 rounded-2xl bg-primary/5"
+                  />
+                )}
+                <Icon
+                  className={cn(
+                    "relative z-10 h-5 w-5 mb-1 transition-transform duration-300",
+                    isActive ? "scale-110 text-white" : "group-hover:scale-105"
+                  )}
+                />
+
+                <span
+                  className={cn(
+                    "relative z-10 text-[11px] font-semibold leading-none",
+                    isActive ? "text-white" : "group-hover:text-primary"
+                  )}
+                >
+                  {tab.label}
+                </span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute bottom-1 start-6 -translate-x-1/2 w-8 h-0.5 rounded-full transition-all duration-300",
+                    isActive ? "bg-white/85 opacity-100" : "opacity-0"
+                  )}
+                />
+              </button>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )

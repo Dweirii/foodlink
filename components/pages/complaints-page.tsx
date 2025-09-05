@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
+import { Angry, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ComplaintForm, type ComplaintData } from "@/components/complaint-form"
 import { ComplaintList } from "@/components/complaint-list"
@@ -54,19 +54,23 @@ export function ComplaintsPage() {
       default:
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-accent/5 p-6 rounded-2xl border border-primary/20">
-              <div>
-                <h1 className="text-3xl font-bold text-primary mb-2">الشكاوى والبلاغات</h1>
-                <p className="text-muted-foreground">تابع شكاواك وقدم بلاغات جديدة</p>
-              </div>
+            <div
+              dir="rtl"
+              className="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-between gap-4 bg-gradient-to-r from-accent/10 to-primary/5 p-6 rounded-2xl border border-accent/20"
+            >
               <Button
                 onClick={() => setViewMode("form")}
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300"
+                size={"lg"}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 rtl:flex-row-reverse w-full md:w-auto"
               >
-                <Plus className="w-5 h-5 ml-2" />
-                شكوى جديدة
+                <Plus className="w-5 h-5" />
+                <span>تقديم شكوى</span>
               </Button>
+              <div className="text-right">
+                <h1 className="text-3xl font-bold text-primary mb-2 flex items-center justify-end gap-3 rtl:flex-row-reverse">
+                  <span>الشكاوى والملاحظات</span>
+                </h1>
+              </div>
             </div>
             <ComplaintList complaints={complaints} onViewDetails={handleViewDetails} />
           </div>
